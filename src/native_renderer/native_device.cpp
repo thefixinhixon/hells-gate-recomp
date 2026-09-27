@@ -3,9 +3,9 @@
 #if defined(_WIN32)
 #include <windows.h>
 #define VK_USE_PLATFORM_WIN32_KHR
+#endif
 #define VK_NO_PROTOTYPES
 #include "volk.h"
-#endif
 
 #include "Graphics/GraphicsEngineVulkan/interface/EngineFactoryVk.h"
 #include "Graphics/GraphicsEngineVulkan/interface/RenderDeviceVk.h"
@@ -231,7 +231,14 @@ bool NativeDevice::initialize(void* hwnd, uint32_t width, uint32_t height) {
   sc_desc.DefaultDepthValue = 1.0f;
   sc_desc.IsPrimary = true;
 
+#if defined(_WIN32)
   Diligent::NativeWindow native_window(hwnd);
+#else
+  // TODO: populate WindowId/pDisplay from SDL_GetWindowWMInfo when the
+  // Diligent native path is wired up on Linux. Currently unreachable:
+  // nothing instantiates NativeRendererIntegration yet.
+  Diligent::NativeWindow native_window{};
+#endif
 
   impl_->factory->CreateSwapChainVk(impl_->device, impl_->context, sc_desc,
                                     native_window, &impl_->swapchain);

@@ -6,7 +6,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCoreApplication>
-#include <QDesktopServices>
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -24,6 +24,7 @@
 #include <QSpinBox>
 #include <QStandardPaths>
 #include <QTabWidget>
+#include <QTextStream>
 #include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -583,12 +584,20 @@ void MainWindow::play() {
     return;
   }
 
-  QDir().mkpath(QDir(dataRoot_).filePath(QStringLiteral("logs")));
+  const QString logsDir = QDir(dataRoot_).filePath(QStringLiteral("logs"));
+  QDir().mkpath(logsDir);
 
-  QProcess process;
-  process.setProgram(executable);
-  process.setArguments(GameConfig::commandLine(dataRoot_, gameRoot_, settings));
-  process.setWorkingDirectory(dataRoot_);
+  // Launch the game as a managed child process (not detached) so its
+  // console output is captured to the logs folder. A silent instant-death
+  // is the most common "nothing happens" failure mode.
+  if (gameProcess_ != nullptr) {
+    gameProcess_->deleteLater();
+    gameProcess_ = nullptr;
+  }
+  gameProcess_ = new QProcess(this);
+  gameProcess_->setProgram(executable);
+  gameProcess_->setArguments(GameConfig::commandLine(dataRoot_, gameRoot_, settings));
+  gameProcess_->setWorkingDirectory(dataRoot_);
   QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
   const QDir app(QCoreApplication::applicationDirPath());
   QStringList libraryPaths{app.absolutePath(),
@@ -601,11 +610,89 @@ void MainWindow::play() {
   environment.insert(QStringLiteral("DISABLE_LSFG"), QStringLiteral("1"));
   environment.insert(QStringLiteral("XDG_CACHE_HOME"),
                      QDir(dataRoot_).filePath(QStringLiteral("cache")));
-  process.setProcessEnvironment(environment);
+  gameProcess_->setProcessEnvironment(environment);
+  const QString stdoutLog =
+      QDir(logsDir).filePath(QStringLiteral("game-stdout.log"));
+  const QString stderrLog =
+      QDir(logsDir).filePath(QStringLiteral("game-stderr.log"));
+  gameProcess_->setStandardOutputFile(stdoutLog, QIODevice::Truncate);
+  gameProcess_->setStandardErrorFile(stderrLog, QIODevice::Truncate);
 
-  if (!process.startDetached()) {
-    QMessageBox::critical(this, tr("Could not start"),
-                          process.errorString());
+  // Record the exact command line for diagnostics.
+  {
+    QFile cmdLog(QDir(logsDir).filePath(QStringLiteral("last-command.txt")));
+    if (cmdLog.open(QIODevice::WriteOnly | QIODevice::Text)) {
+      QTextStream out(&cmdLog);
+      out << executable;
+      for (const QString& arg : gameProcess_->arguments()) {
+        out << ' ' << arg;
+      }
+      out << '\n';
+    }
+  }
+
+  connect(gameProcess_,
+          QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+          this, &MainWindow::onGameFinished);
+  connect(gameProcess_, &QProcess::errorOccurred,
+          this, &MainWindow::onGameError);
+
+  statusLabel_->setText(tr("Starting game…"));
+  gameStartMsecs_ = QDateTime::currentMSecsSinceEpoch();
+  gameProcess_->start();
+  if (!gameProcess_->waitForStarted(10000)) {
+    QMessageBox::critical(
+        this, tr("Could not start"),
+        tr("The game did not start:\n%1\n\nSee %2")
+            .arg(gameProcess_->errorString(), stderrLog));
+    gameProcess_->deleteLater();
+    gameProcess_ = nullptr;
+    updateStatus();
+  }
+}
+
+void MainWindow::onGameFinished(int exitCode, QProcess::ExitStatus exitStatus) {
+  const qint64 lifetime = QDateTime::currentMSecsSinceEpoch() - gameStartMsecs_;
+  updateStatus();
+  // A game that dies within ~15s almost certainly failed to initialize.
+  // Surface that instead of silently returning to the launcher.
+  if (lifetime < 15000 && gameProcess_ != nullptr) {
+    const QString logsDir = QDir(dataRoot_).filePath(QStringLiteral("logs"));
+    const QString stderrLog =
+        QDir(logsDir).filePath(QStringLiteral("game-stderr.log"));
+    QString detail;
+    QFile logFile(stderrLog);
+    if (logFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+      const QStringList lines =
+          QString::fromUtf8(logFile.readAll()).split('\n');
+      // Show the last few non-empty lines.
+      QStringList tail;
+      for (int i = lines.size() - 1; i >= 0 && tail.size() < 8; --i) {
+        if (!lines[i].trimmed().isEmpty()) tail.prepend(lines[i].trimmed());
+      }
+      detail = tail.join('\n');
+    }
+    QMessageBox::warning(
+        this, tr("The game exited unexpectedly"),
+        tr("The game closed after %1 ms (exit code %2, %3).\n\n%4\n\nFull output:\n%5")
+            .arg(lifetime)
+            .arg(exitCode)
+            .arg(exitStatus == QProcess::CrashExit ? tr("crashed")
+                                                   : tr("exited normally"))
+            .arg(detail.isEmpty() ? tr("(no output captured)") : detail)
+            .arg(stderrLog));
+  }
+  if (gameProcess_ != nullptr) {
+    gameProcess_->deleteLater();
+    gameProcess_ = nullptr;
+  }
+}
+
+void MainWindow::onGameError(QProcess::ProcessError error) {
+  if (error == QProcess::FailedToStart && gameProcess_ != nullptr) {
+    QMessageBox::critical(
+        this, tr("Could not start"),
+        tr("Failed to launch the game:\n%1").arg(gameProcess_->errorString()));
   }
 }
 
@@ -615,7 +702,20 @@ void MainWindow::openLogs() {
   }
   const QString path = QDir(dataRoot_).filePath(QStringLiteral("logs"));
   QDir().mkpath(path);
-  QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+  // System tools (xdg-open -> kde-open on KDE) must resolve the *system*
+  // Qt, not the one bundled in the AppImage. Launch with LD_LIBRARY_PATH
+  // stripped so the loader falls back to the default system paths.
+  QProcess opener;
+  opener.setProgram(QStringLiteral("xdg-open"));
+  opener.setArguments({QDir::toNativeSeparators(path)});
+  QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+  environment.remove(QStringLiteral("LD_LIBRARY_PATH"));
+  opener.setProcessEnvironment(environment);
+  if (!opener.startDetached()) {
+    QMessageBox::warning(
+        this, tr("Could not open logs"),
+        tr("Could not launch the file manager:\n%1").arg(opener.errorString()));
+  }
 }
 
 void MainWindow::updateStatus() {

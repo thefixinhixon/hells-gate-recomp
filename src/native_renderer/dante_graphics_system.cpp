@@ -4,7 +4,9 @@
 #include <rex/logging/macros.h>
 #include <rex/system/gpu_plugin.h>
 
+#if defined(_WIN32)
 #include <windows.h>
+#endif
 
 #include <cstdlib>
 
@@ -135,9 +137,15 @@ void ApplyRenderScaleConfig() {
     // non-integer ratios supersample rather than undersample.
     const bool fullscreen = rex::cvar::Query<bool>("fullscreen");
     const int window_height = rex::cvar::Query<int32_t>("window_height");
+#if defined(_WIN32)
     const int target_height =
         fullscreen ? GetSystemMetrics(SM_CYSCREEN)
                    : (window_height > 0 ? window_height : 720);
+#else
+    // TODO: query the display height via SDL on Linux; window_height carries
+    // the fullscreen resolution when the app sets it.
+    const int target_height = (window_height > 0 ? window_height : 720);
+#endif
     scale = (target_height + 359) / 720;
   } else {
     scale = std::atoi(mode.c_str());

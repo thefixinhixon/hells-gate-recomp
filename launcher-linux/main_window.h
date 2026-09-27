@@ -3,6 +3,7 @@
 #include "game_config.h"
 
 #include <QMainWindow>
+#include <QProcess>
 
 class QCheckBox;
 class QComboBox;
@@ -27,6 +28,8 @@ class MainWindow final : public QMainWindow {
   void resetSettings();
   void play();
   void openLogs();
+  void onGameFinished(int exitCode, QProcess::ExitStatus exitStatus);
+  void onGameError(QProcess::ProcessError error);
 
  private:
   QWidget* createPlayPage();
@@ -73,6 +76,9 @@ class MainWindow final : public QMainWindow {
   QComboBox* language_ = nullptr;
   QSpinBox* country_ = nullptr;
   QCheckBox* logging_ = nullptr;
+
+  QProcess* gameProcess_ = nullptr;
+  qint64 gameStartMsecs_ = 0;
 };
 
 }  

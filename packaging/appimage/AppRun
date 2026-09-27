@@ -1,11 +1,12 @@
-
+#!/bin/bash
 set -eu
 
 HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 export LD_LIBRARY_PATH="$HERE/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export PATH="$HERE/usr/libexec:$HERE/usr/bin:$PATH"
 export QT_PLUGIN_PATH="$HERE/usr/plugins"
-export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+# Do not force QT_QPA_PLATFORM: Qt auto-selects Wayland on Wayland sessions
+# and xcb on X11. (Forcing xcb under XWayland broke mouse input.)
 export DISABLE_LSFG="${DISABLE_LSFG:-1}"
 
 exec "$HERE/usr/bin/dantes_inferno_launcher" "$@"
