@@ -165,8 +165,7 @@ if [[ -d "$QT6_PLUGIN_ROOT/wayland-shell-integration" ]]; then
         "$APPDIR/usr/plugins/wayland-shell-integration/"
   cp -a "$QT6_PLUGIN_ROOT/wayland-graphics-integration-client/." \
         "$APPDIR/usr/plugins/wayland-graphics-integration-client/"
-  for lib in libQt6WaylandClient.so.6 libQt6WaylandEglClientHwIntegration.so.6 \
-             libwayland-client.so.0 libwayland-cursor.so.0 libwayland-egl.so.1; do
+  for lib in libQt6WaylandClient.so.6 libQt6WaylandEglClientHwIntegration.so.6; do
     if [[ ! -f "$APPDIR/usr/lib/$lib" ]]; then
       for dir in /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu /usr/lib; do
         if [[ -f "$dir/$lib" ]]; then
@@ -178,6 +177,10 @@ if [[ -d "$QT6_PLUGIN_ROOT/wayland-shell-integration" ]]; then
       done
     fi
   done
+  # NOTE: Do NOT bundle libwayland-client/cursor/egl. The game (SDL) and Qt
+  # both need these, but they must match the host compositor's protocols.
+  # Bundling them breaks the game's SDL Wayland init; the system copies are
+  # always compatible. Qt's own libQt6WaylandClient is bundled above.
   # Pull in any further dependencies of the staged Wayland plugins that are
   # missing from the bundle (skipping core system libs linuxdeploy excludes).
   for plugin in "$APPDIR"/usr/plugins/wayland-shell-integration/*.so \
@@ -190,6 +193,10 @@ if [[ -d "$QT6_PLUGIN_ROOT/wayland-shell-integration" ]]; then
       [[ -z "$dep_path" || "$dep_path" == "not" ]] && continue
       case "$dep_name" in
         libc.so*|libm.so*|libdl.so*|libpthread.so*|librt.so*|ld-linux*|libgcc_s*|libstdc++*) continue;;
+        # Never bundle the Wayland client libs: SDL (game) and Qt both need
+        # them, but they must match the host compositor. Bundled copies break
+        # the game's SDL Wayland init.
+        libwayland-client*|libwayland-cursor*|libwayland-egl*|libwayland-server*) continue;;
       esac
       if [[ ! -f "$APPDIR/usr/lib/$dep_name" && -f "$dep_path" ]]; then
         cp -aL "$dep_path" "$APPDIR/usr/lib/$dep_name"

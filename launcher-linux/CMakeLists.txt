@@ -1,4 +1,12 @@
+cmake_minimum_required(VERSION 3.28)
+project(dantes_inferno_launcher CXX)
+
 set(CMAKE_AUTOMOC ON)
+
+# Allow standalone builds (find Qt6 if the parent project hasn't).
+if(NOT TARGET Qt6::Core)
+  find_package(Qt6 6.4 COMPONENTS Core Gui Widgets REQUIRED)
+endif()
 
 add_executable(dantes_inferno_launcher
     main.cpp

@@ -55,7 +55,13 @@ QGroupBox* group(const QString& title, QLayout* layout) {
 }  
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
+#if defined(__aarch64__)
   setWindowTitle(QStringLiteral("Dante's Inferno — ARM64"));
+#elif defined(__x86_64__)
+  setWindowTitle(QStringLiteral("Dante's Inferno — x86_64 Linux"));
+#else
+  setWindowTitle(QStringLiteral("Dante's Inferno"));
+#endif
   resize(920, 650);
   setMinimumSize(760, 560);
 
@@ -169,7 +175,13 @@ QWidget* MainWindow::createPlayPage() {
   layout->addLayout(actions);
 
   auto* version =
+#if defined(__aarch64__)
       new QLabel(tr("Launcher ARM64 %1").arg(QStringLiteral(DANTES_LAUNCHER_VERSION)));
+#elif defined(__x86_64__)
+      new QLabel(tr("Launcher x86_64 Linux %1").arg(QStringLiteral(DANTES_LAUNCHER_VERSION)));
+#else
+      new QLabel(tr("Launcher %1").arg(QStringLiteral(DANTES_LAUNCHER_VERSION)));
+#endif
   version->setAlignment(Qt::AlignRight);
   layout->addWidget(version);
   return page;
