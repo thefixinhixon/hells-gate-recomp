@@ -187,6 +187,9 @@ QWidget* MainWindow::createGraphicsPage() {
       valueCombo({{tr("Off"), QStringLiteral("none")},
                   {QStringLiteral("FXAA"), QStringLiteral("fxaa")},
                   {tr("FXAA Extreme"), QStringLiteral("fxaa_extreme")}});
+  upscaling_ =
+      valueCombo({{tr("Bilinear (default)"), QStringLiteral("bilinear")},
+                  {QStringLiteral("AMD FSR"), QStringLiteral("fsr")}});
   anisotropic_ =
       valueCombo({{tr("Default"), -1}, {QStringLiteral("2×"), 2},
                   {QStringLiteral("4×"), 4}, {QStringLiteral("8×"), 8},
@@ -197,6 +200,7 @@ QWidget* MainWindow::createGraphicsPage() {
 
   form->addRow(tr("Resolution scale:"), resolutionScale_);
   form->addRow(tr("Anti-aliasing:"), antiAliasing_);
+  form->addRow(tr("Upscaling:"), upscaling_);
   form->addRow(tr("Anisotropic filtering:"), anisotropic_);
   form->addRow(tr("Vulkan pipeline threads:"), pipelineThreads_);
   outer->addWidget(group(tr("Graphics quality"), form));
@@ -222,8 +226,15 @@ QWidget* MainWindow::createGraphicsPage() {
   outer->addWidget(group(tr("Presentation and performance"), flags));
 
   auto* note = new QLabel(tr(
+#if defined(Q_PROCESSOR_ARM_64)
       "The Vulkan FBO backend and disabled sparse memory are applied "
-      "automatically for ARM64/Turnip."));
+      "automatically for ARM64/Turnip."
+#else
+      "Running on x86_64: default Vulkan render target path and sparse "
+      "shared memory are used. ARM64/Turnip builds force the FBO backend "
+      "and disable sparse memory automatically."
+#endif
+      ));
   note->setWordWrap(true);
   outer->addWidget(note);
   outer->addStretch();
@@ -492,6 +503,7 @@ void MainWindow::loadSettings() {
 void MainWindow::applySettings(const GameSettings& value) {
   selectValue(resolutionScale_, value.resolutionScale);
   selectValue(antiAliasing_, value.antiAliasing);
+  selectValue(upscaling_, value.upscaling);
   selectValue(anisotropic_, value.anisotropic);
   fullscreen_->setChecked(value.fullscreen);
   vsync_->setChecked(value.vsync);
@@ -516,6 +528,7 @@ GameSettings MainWindow::collectSettings() const {
   GameSettings value;
   value.resolutionScale = resolutionScale_->currentData().toInt();
   value.antiAliasing = antiAliasing_->currentData().toString();
+  value.upscaling = upscaling_->currentData().toString();
   value.anisotropic = anisotropic_->currentData().toInt();
   value.fullscreen = fullscreen_->isChecked();
   value.vsync = vsync_->isChecked();

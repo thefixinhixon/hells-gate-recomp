@@ -13,6 +13,7 @@ struct GameSettings {
   bool fullscreen = true;
   bool vsync = true;
   int frameLimit = 60;
+  QString upscaling = QStringLiteral("bilinear");
   bool native2xMsaa = false;
   bool asyncShaders = true;
   int pipelineThreads = -1;

@@ -58,6 +58,7 @@ class MainWindow final : public QMainWindow {
 
   QComboBox* resolutionScale_ = nullptr;
   QComboBox* antiAliasing_ = nullptr;
+  QComboBox* upscaling_ = nullptr;
   QComboBox* anisotropic_ = nullptr;
   QCheckBox* fullscreen_ = nullptr;
   QCheckBox* vsync_ = nullptr;

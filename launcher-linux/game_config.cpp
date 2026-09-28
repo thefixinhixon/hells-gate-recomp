@@ -69,6 +69,9 @@ GameSettings GameConfig::read(QSettings& in) {
   result.vsync = in.value(QStringLiteral("graphics/vsync"), true).toBool();
   result.frameLimit =
       in.value(QStringLiteral("graphics/frame_limit"), 60).toInt();
+  result.upscaling =
+      in.value(QStringLiteral("graphics/upscaling"), QStringLiteral("bilinear"))
+          .toString();
   result.native2xMsaa =
       in.value(QStringLiteral("graphics/native_2x_msaa"), false).toBool();
   result.asyncShaders =
@@ -107,6 +110,7 @@ void GameConfig::write(QSettings& out, const GameSettings& value) {
   out.setValue(QStringLiteral("graphics/fullscreen"), value.fullscreen);
   out.setValue(QStringLiteral("graphics/vsync"), value.vsync);
   out.setValue(QStringLiteral("graphics/frame_limit"), value.frameLimit);
+  out.setValue(QStringLiteral("graphics/upscaling"), value.upscaling);
   out.setValue(QStringLiteral("graphics/native_2x_msaa"), value.native2xMsaa);
   out.setValue(QStringLiteral("graphics/async_shader_compilation"),
                value.asyncShaders);
@@ -168,11 +172,20 @@ QStringList GameConfig::commandLine(const QString& dataRoot,
       booleanArgument("fullscreen", value.fullscreen),
       booleanArgument("vsync", value.vsync),
       valueArgument("frame_limit", QString::number(value.frameLimit)),
+      valueArgument("present_effect", value.upscaling),
       booleanArgument("native_2x_msaa", value.native2xMsaa),
       booleanArgument("async_shader_compilation", value.asyncShaders),
       valueArgument("vulkan_pipeline_creation_threads",
                     QString::number(value.pipelineThreads)),
+#if defined(Q_PROCESSOR_ARM_64)
+      // Turnip/ARM64 workaround: force the fast FBO render target path.
+      // (On x86_64 the SDK default already selects the same host-render-target
+      // path, so no override is needed there.)
       valueArgument("render_target_path_vulkan", QStringLiteral("fbo")),
+#endif
+      // Sparse shared memory is disabled on all platforms: it black-screens
+      // on AMD RX 6600/RADV (and is buggy on mobile drivers), so force the
+      // reliable non-sparse shared memory buffer.
       booleanArgument("vulkan_sparse_shared_memory", false),
       booleanArgument("audio_force_stereo", value.forceStereo),
       valueArgument("audio_maxqframes",

@@ -170,7 +170,9 @@ if [[ -d "$QT6_PLUGIN_ROOT/wayland-shell-integration" ]]; then
     if [[ ! -f "$APPDIR/usr/lib/$lib" ]]; then
       for dir in /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu /usr/lib; do
         if [[ -f "$dir/$lib" ]]; then
-          cp -a "$dir/$lib" "$APPDIR/usr/lib/"
+          # Dereference symlinks (-L): a preserved symlink would dangle if its
+          # versioned target isn't also bundled.
+          cp -aL "$dir/$lib" "$APPDIR/usr/lib/"
           break
         fi
       done
@@ -190,7 +192,7 @@ if [[ -d "$QT6_PLUGIN_ROOT/wayland-shell-integration" ]]; then
         libc.so*|libm.so*|libdl.so*|libpthread.so*|librt.so*|ld-linux*|libgcc_s*|libstdc++*) continue;;
       esac
       if [[ ! -f "$APPDIR/usr/lib/$dep_name" && -f "$dep_path" ]]; then
-        cp -a "$dep_path" "$APPDIR/usr/lib/$dep_name"
+        cp -aL "$dep_path" "$APPDIR/usr/lib/$dep_name"
       fi
     done < <(ldd "$plugin" 2>/dev/null | grep "=>")
   done
