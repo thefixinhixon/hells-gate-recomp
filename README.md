@@ -29,15 +29,31 @@ runtime.
 
 ## 🤖 AI Usage Disclosure
 
-Transparency and integrity are important to this project. Artificial Intelligence (AI) tools were utilized as part of the development and maintenance workflow, strictly serving as an assistant to handle repetitive, time-consuming, and low-level tasks.
+Transparency matters here, so let's be upfront: this fork's Linux AppImage
+work (launcher improvements, bug fixes, packaging) was developed
+collaboratively with an AI assistant (Muse, by Meta).
 
-### How AI Was Used:
-* **Documentation:** Generating initial drafts, organizing notes, and structuring documentation to keep project progress up to date.
-* **Research & Exploration:** Investigating APIs, syntax references, and conceptual troubleshooting.
-* **Git Workflows:** Assisting with routine commit descriptions, repository maintenance tasks, and boilerplate structuring.
+### What the AI did:
+* **Launcher features:** Designed and implemented the FSR upscaling selector,
+  frame limiter UI, and Vulkan argument handling in the Qt launcher
+* **Bug diagnosis:** Tracked down the black-screen-at-launch (Vulkan sparse
+  memory on AMD), the dead-mouse-input issue (dangling symlinks breaking the
+  Qt Wayland plugin), and the build environment failures
+* **Packaging:** Fixed the AppImage build script (symlink dereferencing,
+  Wayland plugin bundling)
+* **Documentation:** Wrote the patch docs and build notes in `patches/`
 
-### Human Oversight:
-While AI accelerated the auxiliary workflow, all core architectural decisions, advanced problem-solving, code implementation, and final reviews were entirely human-driven. The AI served to eliminate friction, allowing focus on high-level logic and feature development.
+### What the human did:
+* **Direction:** Every feature and fix was requested, prioritized, and
+  approved by the maintainer
+* **Testing:** All validation happened on real hardware (Kubuntu/Plasma
+  Wayland, AMD RX 6600) — the AI can't test what it can't run
+* **Decisions:** What to build, what to publish, and how to present it were
+  all human calls
+
+The upstream ReXGlue SDK and the original port are human-written. The AI
+contributions here are real code, not just docs — and we're not going to
+pretend otherwise.
 
 ## Linux build (Ubuntu)
 
