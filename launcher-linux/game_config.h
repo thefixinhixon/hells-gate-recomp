@@ -12,6 +12,7 @@ struct GameSettings {
   int anisotropic = 16;
   bool fullscreen = true;
   bool vsync = true;
+  int frameLimit = 60;
   bool native2xMsaa = false;
   bool asyncShaders = true;
   int pipelineThreads = -1;

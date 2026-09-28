@@ -61,6 +61,7 @@ class MainWindow final : public QMainWindow {
   QComboBox* anisotropic_ = nullptr;
   QCheckBox* fullscreen_ = nullptr;
   QCheckBox* vsync_ = nullptr;
+  QSpinBox* frameLimit_ = nullptr;
   QCheckBox* nativeMsaa_ = nullptr;
   QCheckBox* asyncShaders_ = nullptr;
   QSpinBox* pipelineThreads_ = nullptr;

@@ -210,6 +210,15 @@ QWidget* MainWindow::createGraphicsPage() {
   flags->addWidget(vsync_);
   flags->addWidget(nativeMsaa_);
   flags->addWidget(asyncShaders_);
+  auto* frameLimitRow = new QHBoxLayout;
+  frameLimitRow->addWidget(new QLabel(tr("Frame rate limit:")));
+  frameLimit_ = new QSpinBox;
+  frameLimit_->setRange(0, 240);
+  frameLimit_->setSpecialValueText(tr("Unlimited"));
+  frameLimit_->setSuffix(tr(" FPS"));
+  frameLimitRow->addWidget(frameLimit_);
+  frameLimitRow->addStretch();
+  flags->addLayout(frameLimitRow);
   outer->addWidget(group(tr("Presentation and performance"), flags));
 
   auto* note = new QLabel(tr(
@@ -486,6 +495,7 @@ void MainWindow::applySettings(const GameSettings& value) {
   selectValue(anisotropic_, value.anisotropic);
   fullscreen_->setChecked(value.fullscreen);
   vsync_->setChecked(value.vsync);
+  frameLimit_->setValue(value.frameLimit);
   nativeMsaa_->setChecked(value.native2xMsaa);
   asyncShaders_->setChecked(value.asyncShaders);
   pipelineThreads_->setValue(value.pipelineThreads);
@@ -509,6 +519,7 @@ GameSettings MainWindow::collectSettings() const {
   value.anisotropic = anisotropic_->currentData().toInt();
   value.fullscreen = fullscreen_->isChecked();
   value.vsync = vsync_->isChecked();
+  value.frameLimit = frameLimit_->value();
   value.native2xMsaa = nativeMsaa_->isChecked();
   value.asyncShaders = asyncShaders_->isChecked();
   value.pipelineThreads = pipelineThreads_->value();

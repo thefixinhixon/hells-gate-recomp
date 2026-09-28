@@ -67,6 +67,8 @@ GameSettings GameConfig::read(QSettings& in) {
   result.fullscreen =
       in.value(QStringLiteral("graphics/fullscreen"), true).toBool();
   result.vsync = in.value(QStringLiteral("graphics/vsync"), true).toBool();
+  result.frameLimit =
+      in.value(QStringLiteral("graphics/frame_limit"), 60).toInt();
   result.native2xMsaa =
       in.value(QStringLiteral("graphics/native_2x_msaa"), false).toBool();
   result.asyncShaders =
@@ -104,6 +106,7 @@ void GameConfig::write(QSettings& out, const GameSettings& value) {
                value.anisotropic);
   out.setValue(QStringLiteral("graphics/fullscreen"), value.fullscreen);
   out.setValue(QStringLiteral("graphics/vsync"), value.vsync);
+  out.setValue(QStringLiteral("graphics/frame_limit"), value.frameLimit);
   out.setValue(QStringLiteral("graphics/native_2x_msaa"), value.native2xMsaa);
   out.setValue(QStringLiteral("graphics/async_shader_compilation"),
                value.asyncShaders);
@@ -164,6 +167,7 @@ QStringList GameConfig::commandLine(const QString& dataRoot,
                     QString::number(value.anisotropic)),
       booleanArgument("fullscreen", value.fullscreen),
       booleanArgument("vsync", value.vsync),
+      valueArgument("frame_limit", QString::number(value.frameLimit)),
       booleanArgument("native_2x_msaa", value.native2xMsaa),
       booleanArgument("async_shader_compilation", value.asyncShaders),
       valueArgument("vulkan_pipeline_creation_threads",
